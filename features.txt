@@ -1,0 +1,71 @@
+1. GC Content of the variant:
+
+The percentage of guanine (G) and cytosine (C) nucleotides in the DNA sequence.
+Calculation:
+
+def gc_content(sequence):
+    g = sequence.count('G')
+    c = sequence.count('C')
+    return (g + c) / len(sequence) * 100
+	
+2. K-fold energy of the variant with sliding window length 40:
+Calculation of folding energies using a sliding window approach over the sequence.
+Calculation:
+This typically involves using bioinformatics tools like RNAfold to compute folding energies over sliding windows of the sequence.
+
+3. K-fold energy of the variant:
+
+Overall folding energy calculation of the sequence.
+Calculation:
+Similar to point 2, using tools like RNAfold.
+
+4. Difference between the variant folding energy and the Control:
+
+Comparing the variant's folding energy with a control sequence.
+Calculation:
+def energy_difference(variant_energy, control_energy):
+    return variant_energy - control_energy
+	
+5. Hybridization energy of Anti-SD with sliding window length 6:
+
+Calculation of hybridization energy with a specific sequence (Anti-SD) over sliding windows.
+Calculation:
+This would involve specific bioinformatics tools designed for hybridization energy calculations.
+	
+6. Count and location of mutations in the variant compared to the Control:
+
+Counting the number of mutations and identifying their locations.
+Calculation:
+def count_mutations(variant_sequence, control_sequence):
+    mutations = [(i, v) for i, (v, c) in enumerate(zip(variant_sequence, control_sequence)) if v != c]
+    return len(mutations), mutations	
+
+
+7. Count of codons that have been replaced in the variant compared to the Control:
+
+Counting the number of codon changes.
+Calculation:
+def count_codon_changes(variant_sequence, control_sequence):
+    codons_variant = [variant_sequence[i:i+3] for i in range(0, len(variant_sequence), 3)]
+    codons_control = [control_sequence[i:i+3] for i in range(0, len(control_sequence), 3)]
+    changes = [(i, v) for i, (v, c) in enumerate(zip(codons_variant, codons_control)) if v != c]
+    return len(changes), changes
+	
+8. ChimeraARS sequence features of the variant (more on Chimera - throughout the course):
+
+This refers to specific sequence features derived from ChimeraARS.
+Calculation:
+Specific details would depend on the ChimeraARS tool and its outputs.
+
+
+9. tAI and CAI of tRNA and ORF of E. coli:
+
+tRNA Adaptation Index (tAI) and Codon Adaptation Index (CAI) are measures of translation efficiency.
+Calculation:
+This involves bioinformatics calculations typically done using specialized software or scripts.
+
+PSSM Z-score profiles of 12 selected motifs in E. coli genomes (more on motifs - throughout the course):
+
+Position-Specific Scoring Matrix (PSSM) Z-scores for selected motifs.
+Calculation:
+Requires motif analysis tools that generate PSSM - did it in hw 3 and Z-scores.
