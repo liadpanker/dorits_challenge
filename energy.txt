@@ -1,0 +1,37 @@
+from seqfold import dg
+import pandas as pd
+
+def calculate_total_energy(sequence, temp=37.0):
+    """
+    Calculate the folding energy for the entire given sequence.
+    
+    Parameters:
+    - sequence: The RNA or DNA sequence (string).
+    - temp: The temperature for the energy calculation (default is 37.0).
+    
+    Returns:
+    - The folding energy for the sequence.
+    """
+    return dg(sequence, temp=temp)
+
+# Load the Excel file
+file_path = 'Train_data.xlsx'  # Update this path if needed
+xls = pd.ExcelFile(file_path)
+
+# Load the data from the "Variants data" sheet
+variants_data = pd.read_excel(xls, sheet_name='Variants data')
+
+# Clean up the sequences
+variants_data['Variant sequence'] = variants_data['Variant sequence'].str.replace("'", "")
+
+# Calculate the total energy for each variant
+variants_data['Total Energy'] = variants_data['Variant sequence'].apply(calculate_total_energy)
+
+import ace_tools as tools; tools.display_dataframe_to_user(name="Variants Data with Total Energy", dataframe=variants_data)
+
+# Display the updated dataframe with total energy
+print(variants_data.head())
+
+# Save the results to a new Excel file
+output_file_path = '/mnt/data/Variants_with_Total_Energy.xlsx'  # Update this path if needed
+variants_data.to_excel(output_file_path, index=False)
