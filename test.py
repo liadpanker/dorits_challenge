@@ -25,9 +25,6 @@ def calculate_pssm_score(subsequence, pssm):
             score *= pssm.iloc[3, i+1]
     return score
 
-# Initialize a dictionary to store the total scores for each variant
-total_scores = {}
-
 # Initialize a list to store the results
 results = []
 
@@ -38,38 +35,28 @@ for motif_name, pssm in pssm_sheets.items():
     # Iterate over each variant
     for idx, row in variants_data.iterrows():
         sequence = row['Variant sequence']
-        variant_number = row['Variant number']
-        variant_total_score = 0.0
 
         # Slide the window across the sequence
         for i in range(len(sequence) - window_size + 1):
             subsequence = sequence[i:i + window_size]
             score = calculate_pssm_score(subsequence, pssm)
-            variant_total_score += score
             results.append({
-                'Variant number': variant_number,
+                'Variant number': row['Variant number'],
                 'Motif': motif_name,
                 'Start position': i,
                 'Subsequence': subsequence,
                 'Score': score
             })
 
-        # Add the total score for this variant to the total_scores dictionary
-        if variant_number in total_scores:
-            total_scores[variant_number] += variant_total_score
-        else:
-            total_scores[variant_number] = variant_total_score
-
 # Convert the results to a DataFrame
 results_df = pd.DataFrame(results)
 
-# Convert the total scores dictionary to a DataFrame
-total_scores_df = pd.DataFrame(list(total_scores.items()), columns=['Variant number', 'Total Score'])
+# Save the results to a new Excel file, each motif in a separate sheet
+with pd.ExcelWriter('Total_Scores_results.xlsx') as writer:
+    for motif_name in results_df['Motif'].unique():
+        motif_results = results_df[results_df['Motif'] == motif_name]
+        motif_results.to_excel(writer, sheet_name=motif_name, index=False)
 
 # Display the results
 print(results_df)
 print(results_df.head())
-
-print(total_scores_df)
-print(total_scores_df.head())
-
