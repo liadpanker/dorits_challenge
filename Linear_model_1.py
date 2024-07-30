@@ -8,11 +8,14 @@ from calculate_dt import calculate_dt
 # Step 1: Load the features from the training and testing data
 train_file_path = 'Train_data_original.xlsx'  # Replace with the path to your training Excel file
 test_file_path = 'Test_data.xlsx'    # Replace with the path to your testing Excel file
+additional_features_path = 'Variants_with_Total_Energy.xlsx'
 sheet_name = 'Features'
 
 # Read the Excel files
 train_features = pd.read_excel(train_file_path, sheet_name=sheet_name)
 test_features = pd.read_excel(test_file_path, sheet_name=sheet_name)
+additional_features = pd.read_excel(additional_features_path)
+
 
 # Display the first few rows of the dataframes
 print("Training Features:")
@@ -38,6 +41,11 @@ train_targets = {'Dt': Dt_train, 'avg_dt': avg_dt_train}
 y_train = pd.DataFrame({'Variant number': list(train_targets['Dt'].keys()),
                         'Dt': [value[0] for value in train_targets['Dt'].values()],
                         'Dt_avg': list(train_targets['avg_dt'].values())})
+
+# Merge the additional features with the training and testing data
+train_features = pd.merge(train_features, additional_features, on='Variant number')
+#test_features = pd.merge(test_features, additional_features, on='Variant number')
+
 
 # Ensure the IDs in the features match those in the targets
 X_train = train_features.set_index('Variant number')
