@@ -59,7 +59,7 @@ def calculate_energies_for_windows(file_path, sheet_name, window_size=40, window
         results.append([variants_data['Variant number'][idx]] + sum_energies)
     # Create a new DataFrame for the results
     results_df = pd.DataFrame(results)
-    results_df.columns = ['Variant'] + [f'Sum Window {i}' for i in range(results_df.shape[1] - 1)]
+    results_df.columns = ['Variant number'] + [f'Sum Window {i}' for i in range(results_df.shape[1] - 1)]
 
     # Save the results to a new Excel file
     results_df.to_excel(output_file_path, index=False)
