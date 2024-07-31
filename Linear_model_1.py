@@ -4,18 +4,24 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 from calculate_dt import calculate_dt
 
-
-# Step 1: Load the features from the training and testing data
+# File paths
 train_file_path = 'Train_data_original.xlsx'  # Replace with the path to your training Excel file
 test_file_path = 'Test_data.xlsx'    # Replace with the path to your testing Excel file
 additional_features_path = 'Variants_with_Total_Energy.xlsx'
-sheet_name = 'Features'
+summary_file_path = 'Scores_results_for_each_matrix.xlsx'  # Path to the provided Excel file
 
 # Read the Excel files
-train_features = pd.read_excel(train_file_path, sheet_name=sheet_name)
-test_features = pd.read_excel(test_file_path, sheet_name=sheet_name)
+train_features = pd.read_excel(train_file_path, sheet_name='Features')
+test_features = pd.read_excel(test_file_path, sheet_name='Features')
 additional_features = pd.read_excel(additional_features_path)
+summary_df = pd.read_excel(summary_file_path, sheet_name='Summary')
 
+# Extract the motif columns and the Variant number
+motif_columns = summary_df.filter(regex='^Motif')  # Assuming columns start with 'motif'
+motif_columns['Variant number'] = summary_df['Variant number']
+
+# Merge the motif columns into the additional features DataFrame
+additional_features = pd.merge(additional_features, motif_columns, on='Variant number')
 
 # Display the first few rows of the dataframes
 print("Training Features:")
@@ -45,7 +51,6 @@ y_train = pd.DataFrame({'Variant number': list(train_targets['Dt'].keys()),
 # Merge the additional features with the training and testing data
 train_features = pd.merge(train_features, additional_features, on='Variant number')
 #test_features = pd.merge(test_features, additional_features, on='Variant number')
-
 
 # Ensure the IDs in the features match those in the targets
 X_train = train_features.set_index('Variant number')
