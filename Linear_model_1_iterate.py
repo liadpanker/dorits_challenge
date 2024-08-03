@@ -96,7 +96,7 @@ spearman_scores = []
 remaining_features = list(X_train.columns)
 
 # Parameter X (number of iterations)
-X = 100
+X = 60000
 # Initialize best parameters
 best_test_size = None
 best_random_state = None

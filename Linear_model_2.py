@@ -96,7 +96,7 @@ best_spearman_corr = float('-inf')
 start_time = time.time()
 
 # Iterate over different random states
-for i in range(1000):  # Number of iterations
+for i in range(2500000):  # Number of iterations
     random_state = random.randint(0, 10000)
     test_size = 0.4  # Keeping test_size constant as per original code
 
