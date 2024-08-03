@@ -1,17 +1,18 @@
 import pandas as pd
-import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 from scipy.stats import spearmanr
 from calculate_dt import calculate_dt
+from calculate_mutation import process_and_generate_features
+
 
 # File paths
 train_file_path = 'Train_data_original.xlsx'  # Replace with the path to your training Excel file
 test_file_path = 'Test_data.xlsx'  # Replace with the path to your testing Excel file
 train_summary_file_path = 'Scores_results_for_each_matrix.xlsx'  # Path to the provided Excel file
-mutations_features_path = 'mutations_results.xlsx'  # Path to the new features file
 test_summary_file_path = 'test_Scores_results_for_each_matrix.xlsx'  # Path to the provided Excel file
+
 
 # Read the original training and testing Excel files
 train_features = pd.read_excel(train_file_path, sheet_name='Features')
@@ -21,16 +22,11 @@ test_summary_df = pd.read_excel(test_summary_file_path, sheet_name='Summary')
 
 # Load the additional feature files
 train_additional_files = [
-    #"Train_Variants_with_Energy_Window40_Sum1.xlsx",
-  #  "Train_Variants_with_Energy_MaxWindow_Sum1.xlsx",
-    "Train_Variants_with_Energy_Window40_Sum40.xlsx",
-    mutations_features_path
+    "Train_Variants_with_Energy_Window40_Sum40.xlsx"
 ]
 
 test_additional_files = [
-    #"Test_Variants_with_Energy_Window40_Sum1.xlsx",
-   # "Test_Variants_with_Energy_Window40_Sum40.xlsx",
-    "Test_Variants_with_Energy_MaxWindow_Sum1.xlsx"
+   "Test_Variants_with_Energy_Window40_Sum40.xlsx"
 ]
 
 additional_features=None
@@ -54,7 +50,13 @@ test_motif_columns['Variant number'] = test_summary_df['Variant number']
 
 # Merge the motif columns into the additional features DataFrame
 train_features = pd.merge(train_features, train_motif_columns, on='Variant number')
-test_features = pd.merge(test_motif_columns, test_motif_columns, on='Variant number')
+test_features = pd.merge(test_features, test_motif_columns, on='Variant number')
+
+#mutations:
+train_features_df, test_features_df = process_and_generate_features(train_file_path, test_file_path)
+train_features = pd.merge(train_features, train_features_df, on='Variant number')
+test_features = pd.merge(test_features, test_features_df, on='Variant number')
+
 
 # Load the additional sheets for the luminescence data
 train_data = pd.ExcelFile(train_file_path)
@@ -80,7 +82,12 @@ y_train = pd.DataFrame({'Variant number': list(train_targets['Dt'].keys()),
 X_train = train_features.set_index('Variant number')
 y_train = y_train.set_index('Variant number')
 
-X_train = X_train.drop('Mutation Positions', axis=1)
+X_train = X_train.drop('Changed codons', axis=1)
+X_train = X_train.drop('Folding energy window 1', axis=1)
+X_train = X_train.drop('Folding energy window 2', axis=1)
+X_train = X_train.drop('Sum Window 0 from 10', axis=1)
+X_train = X_train.drop('Sum Window 1 from 10', axis=1)
+
 
 # Initialize lists to keep track of selected features and their Spearman correlations
 selected_features = []
@@ -89,14 +96,11 @@ spearman_scores = []
 # Step 1: Start with running the model with each feature individually
 remaining_features = list(X_train.columns)
 
-# Parameter X (number of iterations)
-X = 200
-
 # Initialize best parameters
-best_test_size = 0.20507183253297473
+best_test_size = 0.4
 best_random_state = 9840
 best_spearman_corr = -1
-
+best_feature_spearman_corr = -1
 for i in range(1):
     test_size = best_test_size
     random_state = best_random_state
@@ -106,7 +110,6 @@ for i in range(1):
 
     while current_remaining_features:
         best_feature = None
-        best_feature_spearman_corr = -1
         for feature in current_remaining_features:
             current_features = current_selected_features + [feature]
             X_train_split, X_valid_split, y_train_split, y_valid_split = train_test_split(
@@ -172,11 +175,11 @@ print(f'Mean Squared Error for each target on validation data: {mse_valid}')
 print(f'R^2 Score for each target on validation data: {r2_valid}')
 print(f"Spearman's rank correlation coefficient for Dt: {spearman_corr_dt}")
 print(f"Spearman's rank correlation coefficient for Dt_avg: {spearman_corr_dt_avg}")
-exit(0)
 # Now, train the model on the entire training data and make predictions on the test data
 model.fit(X_train_selected, y_train)
 
 # Make predictions on the testing data
+selected_features = selected_features + ['Variant number']
 y_test_pred = model.predict(test_features[selected_features].set_index('Variant number'))
 
 # Convert predictions to DataFrame
@@ -186,5 +189,5 @@ print("Predictions for the test data:")
 print(y_test_pred_df)
 
 # Optional: Display the coefficients
-coefficients = pd.DataFrame(model.coef_, columns=selected_features, index=['Dt', 'Dt_avg'])
+coefficients = pd.DataFrame(model.coef_, columns=selected_features.remove('Variant number'), index=['Dt', 'Dt_avg'])
 print(coefficients)
