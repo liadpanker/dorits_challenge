@@ -5,6 +5,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 from scipy.stats import spearmanr
 from calculate_dt import calculate_dt
+import time
 
 # File paths
 train_file_path = 'Train_data_original.xlsx'  # Replace with the path to your training Excel file
@@ -90,16 +91,20 @@ spearman_scores = []
 remaining_features = list(X_train.columns)
 
 # Parameter X (number of iterations)
-X = 200
+X = 100
+
 
 # Initialize best parameters
-best_test_size = 0.20507183253297473
-best_random_state = 9840
+best_test_size = None
+best_random_state = None
 best_spearman_corr = -1
 
-for i in range(1):
-    test_size = best_test_size
-    random_state = best_random_state
+# Start time measurement
+start_time = time.time()
+
+for i in range(X):
+    test_size = np.random.uniform(0.2, 0.4)
+    random_state = np.random.randint(1000, 10000)
     current_selected_features = []
     current_remaining_features = remaining_features.copy()
     current_spearman_scores = []
@@ -143,12 +148,17 @@ for i in range(1):
         best_test_size = test_size
         best_random_state = random_state
 
-# Print the final selected features
+# End time measurement
+end_time = time.time()
+elapsed_time = end_time - start_time
+
+# Print the final selected features and elapsed time
 print("Selected features based on Spearman correlation:")
 print(selected_features)
 
 print(f"Best test size: {best_test_size}")
 print(f"Best random state: {best_random_state}")
+print(f"Elapsed time for the loop: {elapsed_time:.2f} seconds")
 
 # Final model training with the selected features
 X_train_selected = X_train[selected_features]
@@ -172,7 +182,7 @@ print(f'Mean Squared Error for each target on validation data: {mse_valid}')
 print(f'R^2 Score for each target on validation data: {r2_valid}')
 print(f"Spearman's rank correlation coefficient for Dt: {spearman_corr_dt}")
 print(f"Spearman's rank correlation coefficient for Dt_avg: {spearman_corr_dt_avg}")
-exit(0)
+
 # Now, train the model on the entire training data and make predictions on the test data
 model.fit(X_train_selected, y_train)
 
