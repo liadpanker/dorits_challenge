@@ -100,10 +100,12 @@ X = 60000
 # Initialize best parameters
 best_test_size = None
 best_random_state = None
-best_spearman_corr = -1
-best_feature_spearman_corr = -1
+best_spearman_corr = 0
+best_feature_spearman_corr = 0
 # Start time measurement
 start_time = time.time()
+
+min_features = 4
 
 for i in range(X):
     test_size = 0.4
@@ -114,6 +116,7 @@ for i in range(X):
 
     while current_remaining_features:
         best_feature = None
+        best_local_feature_spearman_corr = 0
         for feature in current_remaining_features:
             current_features = current_selected_features + [feature]
             X_train_split, X_valid_split, y_train_split, y_valid_split = train_test_split(
@@ -131,8 +134,9 @@ for i in range(X):
 
             avg_spearman_corr = (spearman_corr_dt + spearman_corr_dt_avg) / 2
 
-            if avg_spearman_corr > best_feature_spearman_corr:
+            if ((len(current_features) > min_features) and  (avg_spearman_corr > best_feature_spearman_corr)) or ((len(current_features) <= min_features) and avg_spearman_corr>best_local_feature_spearman_corr):
                 best_feature_spearman_corr = avg_spearman_corr
+                best_local_feature_spearman_corr = avg_spearman_corr
                 best_feature = feature
 
         if best_feature:
