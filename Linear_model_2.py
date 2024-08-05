@@ -88,57 +88,19 @@ unwanted_features = ['Changed codons', 'Folding energy window 1', 'Folding energ
 X_train = X_train.drop(columns=unwanted_features, errors='ignore')
 
 # Initialize best parameters
-best_test_size = None
-best_random_state = None
-best_spearman_corr = float('-inf')
+best_test_size = 0.4
+best_random_state = 485575
+selected_features = ['mut_288-312', 'Sum Window 8 from 10', 'Sum Window 6 from 10', 'CAI', 'mut_357-364', 'mut_246-279', 'mut_384-393']
 
-# Time measurement start
-start_time = time.time()
-
-# Iterate over different random states
-for i in range(2500000):  # Number of iterations
-    random_state = random.randint(0, 10000)
-    test_size = 0.4  # Keeping test_size constant as per original code
-
-    # Split the data
-    X_train_split, X_valid_split, y_train_split, y_valid_split = train_test_split(
-        X_train, y_train, test_size=test_size, random_state=random_state)
-
-    # Train the model
-    model = LinearRegression()
-    model.fit(X_train_split, y_train_split)
-
-    # Predict and evaluate
-    y_valid_pred = model.predict(X_valid_split)
-    y_valid_pred_df = pd.DataFrame(y_valid_pred, columns=['Predicted Dt', 'Predicted Dt_avg'], index=X_valid_split.index)
-
-    spearman_corr_dt, _ = spearmanr(y_valid_split['Dt'], y_valid_pred_df['Predicted Dt'])
-    spearman_corr_dt_avg, _ = spearmanr(y_valid_split['Dt_avg'], y_valid_pred_df['Predicted Dt_avg'])
-
-    avg_spearman_corr = (spearman_corr_dt + spearman_corr_dt_avg) / 2
-
-    # Update best parameters if current iteration is better
-    if avg_spearman_corr > best_spearman_corr:
-        best_spearman_corr = avg_spearman_corr
-        best_test_size = test_size
-        best_random_state = random_state
-
-# Time measurement end
-end_time = time.time()
-elapsed_time = end_time - start_time
-
-# Print the best parameters and elapsed time
-print(f"Best Spearman Correlation: {best_spearman_corr}")
-print(f"Best test size: {best_test_size}")
-print(f"Best random state: {best_random_state}")
-print(f"Elapsed time for the loop: {elapsed_time:.2f} seconds")
-
-# Final model training with all features using the best random state
+# Final model training with the selected features
+X_train_selected = X_train[selected_features]
 X_train_split, X_valid_split, y_train_split, y_valid_split = train_test_split(
-    X_train, y_train, test_size=best_test_size, random_state=best_random_state)
+    X_train_selected, y_train, test_size=best_test_size, random_state=best_random_state)
 
 model = LinearRegression()
 model.fit(X_train_split, y_train_split)
+
+
 
 y_valid_pred = model.predict(X_valid_split)
 y_valid_pred_df = pd.DataFrame(y_valid_pred, columns=['Predicted Dt', 'Predicted Dt_avg'], index=X_valid_split.index)
@@ -165,14 +127,21 @@ y_test_pred = model.predict(test_features.set_index('Variant number'))
 # Convert predictions to DataFrame
 y_test_pred_df = pd.DataFrame(y_test_pred, columns=['Predicted Dt', 'Predicted Dt_avg'],
                               index=test_features['Variant number'])
-print("Predictions for the test data:")
-print(y_test_pred_df)
+# Add the Variant number column to the predictions DataFrame
+y_test_pred_df['Variant number'] = y_test_pred_df.index
 
-# Optional: Display the coefficients
-coefficients = pd.DataFrame(model.coef_, columns=X_train.columns, index=['Dt', 'Dt_avg'])
-print(coefficients)
+# Reorder the columns to [name, dt_average, DT_max]
+y_test_pred_df = y_test_pred_df[['Variant number', 'Predicted Dt_avg', 'Predicted Dt']]
+
+# Rename the columns to match the required names
+y_test_pred_df.columns = ['name', 'dt_average', 'DT_max']
+
+# Save the predictions to an Excel file
+predictions_file_path = 'LR_test_predictions.xlsx'
+y_test_pred_df.to_excel(predictions_file_path, index=False)
+print(f"Predictions saved to {predictions_file_path}")
 
 # Save the model
-model_path = 'linear_regression_model_spearman2_iter.pkl'
+model_path = 'linear_regression_0.5090756859870232_0.5274458071165724.pkl'
 joblib.dump(model, model_path)
 print(f"Model saved to {model_path}")

@@ -96,7 +96,7 @@ spearman_scores = []
 remaining_features = list(X_train.columns)
 
 # Parameter X (number of iterations)
-X = 60000
+X = 100
 # Initialize best parameters
 best_test_size = None
 best_random_state = None
@@ -105,11 +105,11 @@ best_feature_spearman_corr = 0
 # Start time measurement
 start_time = time.time()
 
-min_features = 4
+min_features = 10
 
 for i in range(X):
     test_size = 0.4
-    random_state = np.random.randint(1, 10000)
+    random_state = np.random.randint(1, 1000000)
     current_selected_features = []
     current_remaining_features = remaining_features.copy()
     current_spearman_scores = []
@@ -192,7 +192,6 @@ print(f"Spearman's rank correlation coefficient for Dt_avg: {spearman_corr_dt_av
 # Now, train the model on the entire training data and make predictions on the test data
 model.fit(X_train_selected, y_train)
 
-
 # Make predictions on the testing data
 selected_features = selected_features + ['Variant number']
 y_test_pred = model.predict(test_features[selected_features].set_index('Variant number'))
@@ -200,14 +199,17 @@ y_test_pred = model.predict(test_features[selected_features].set_index('Variant 
 # Convert predictions to DataFrame
 y_test_pred_df = pd.DataFrame(y_test_pred, columns=['Predicted Dt', 'Predicted Dt_avg'],
                               index=test_features['Variant number'])
-print("Predictions for the test data:")
-print(y_test_pred_df)
 
-# Optional: Display the coefficients
-coefficients = pd.DataFrame(model.coef_, columns=selected_features.remove('Variant number'), index=['Dt', 'Dt_avg'])
-print(coefficients)
+# Add the Variant number column to the predictions DataFrame
+y_test_pred_df['Variant number'] = y_test_pred_df.index
 
-# Save the model
-model_path = 'linear_regression_model_spearman_iterate.pkl'
-joblib.dump(model, model_path)
-print(f"Model saved to {model_path}")
+# Reorder the columns to [name, dt_average, DT_max]
+y_test_pred_df = y_test_pred_df[['Variant number', 'Predicted Dt_avg', 'Predicted Dt']]
+
+# Rename the columns to match the required names
+y_test_pred_df.columns = ['name', 'dt_average', 'DT_max']
+
+# Save the predictions to an Excel file
+predictions_file_path = 'test_predictions.xlsx'
+y_test_pred_df.to_excel(predictions_file_path, index=False)
+print(f"Predictions saved to {predictions_file_path}")
