@@ -142,6 +142,6 @@ y_test_pred_df.to_excel(predictions_file_path, index=False)
 print(f"Predictions saved to {predictions_file_path}")
 
 # Save the model
-model_path = 'linear_regression_0.5090756859870232_0.5274458071165724.pkl'
+model_path = 'LR_model.pkl'
 joblib.dump(model, model_path)
 print(f"Model saved to {model_path}")

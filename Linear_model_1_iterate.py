@@ -9,6 +9,18 @@ from calculate_mutation import process_and_generate_features
 import time
 import joblib
 
+#load model
+LOAD_MODEL = True
+model_path = 'best_LRI_model.pkl'
+#For training, SINGLE_MODE mean that we load  our best result, when FALSE we run iteration to find best model
+SINGLE_MODE = True
+BEST_SELECTED_FEATURES = ['mut_288-312', 'mut_0-170', 'mut_313-321', 'mut_225-229', 'mut_233-242', 'Sum Window 5 from 10', 'Motif 6', 'Motif 5', 'mut_246-279', 'Sum Window 2 from 10']
+BEST_RANDOM_STATE = 741566
+# Parameter X (number of iterations)
+X = 10
+
+
+
 # File paths
 train_file_path = 'Train_data_original.xlsx'  # Replace with the path to your training Excel file
 test_file_path = 'Test_data.xlsx'  # Replace with the path to your testing Excel file
@@ -95,8 +107,7 @@ spearman_scores = []
 # Step 1: Start with running the model with each feature individually
 remaining_features = list(X_train.columns)
 
-# Parameter X (number of iterations)
-X = 100
+
 # Initialize best parameters
 best_test_size = None
 best_random_state = None
@@ -107,90 +118,102 @@ start_time = time.time()
 
 min_features = 10
 
-for i in range(X):
-    test_size = 0.4
-    random_state = np.random.randint(1, 1000000)
-    current_selected_features = []
-    current_remaining_features = remaining_features.copy()
-    current_spearman_scores = []
+if not (LOAD_MODEL):
+    if not (SINGLE_MODE):
+        for i in range(X):
+            test_size = 0.4
+            random_state = np.random.randint(1, 1000000)
+            current_selected_features = []
+            current_remaining_features = remaining_features.copy()
+            current_spearman_scores = []
+    
+            while current_remaining_features:
+                best_feature = None
+                best_local_feature_spearman_corr = 0
+                for feature in current_remaining_features:
+                    current_features = current_selected_features + [feature]
+                    X_train_split, X_valid_split, y_train_split, y_valid_split = train_test_split(
+                        X_train[current_features], y_train, test_size=test_size, random_state=random_state)
+        
+                    model = LinearRegression()
+                    model.fit(X_train_split, y_train_split)
+        
+                    y_valid_pred = model.predict(X_valid_split)
+                    y_valid_pred_df = pd.DataFrame(y_valid_pred, columns=['Predicted Dt', 'Predicted Dt_avg'],
+                                                index=X_valid_split.index)
+        
+                    spearman_corr_dt, _ = spearmanr(y_valid_split['Dt'], y_valid_pred_df['Predicted Dt'])
+                    spearman_corr_dt_avg, _ = spearmanr(y_valid_split['Dt_avg'], y_valid_pred_df['Predicted Dt_avg'])
+        
+                    avg_spearman_corr = (spearman_corr_dt + spearman_corr_dt_avg) / 2
+        
+                    if ((len(current_features) > min_features) and  (avg_spearman_corr > best_feature_spearman_corr)) or ((len(current_features) <= min_features) and avg_spearman_corr>best_local_feature_spearman_corr):
+                        best_feature_spearman_corr = avg_spearman_corr
+                        best_local_feature_spearman_corr = avg_spearman_corr
+                        best_feature = feature
+        
+                if best_feature:
+                    current_selected_features.append(best_feature)
+                    current_remaining_features.remove(best_feature)
+                    current_spearman_scores.append(best_feature_spearman_corr)
+                else:
+                    break
+        
+            # Update the best parameters if current iteration is better
+            if best_feature_spearman_corr > best_spearman_corr:
+                best_spearman_corr = best_feature_spearman_corr
+                selected_features = current_selected_features.copy()
+                spearman_scores = current_spearman_scores.copy()
+                best_test_size = test_size
+                best_random_state = random_state
+    else:
+        selected_features = BEST_SELECTED_FEATURES
+        best_test_size = 0.4
+        best_random_state = BEST_RANDOM_STATE
+    
+    # End time measurement
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    
+    # Print the final selected features and elapsed time
+    print("Selected features based on Spearman correlation:")
+    print(selected_features)
+    
+    print(f"Best test size: {best_test_size}")
+    print(f"Best random state: {best_random_state}")
+    print(f"Elapsed time for the loop: {elapsed_time:.2f} seconds")
 
-    while current_remaining_features:
-        best_feature = None
-        best_local_feature_spearman_corr = 0
-        for feature in current_remaining_features:
-            current_features = current_selected_features + [feature]
-            X_train_split, X_valid_split, y_train_split, y_valid_split = train_test_split(
-                X_train[current_features], y_train, test_size=test_size, random_state=random_state)
-
-            model = LinearRegression()
-            model.fit(X_train_split, y_train_split)
-
-            y_valid_pred = model.predict(X_valid_split)
-            y_valid_pred_df = pd.DataFrame(y_valid_pred, columns=['Predicted Dt', 'Predicted Dt_avg'],
-                                           index=X_valid_split.index)
-
-            spearman_corr_dt, _ = spearmanr(y_valid_split['Dt'], y_valid_pred_df['Predicted Dt'])
-            spearman_corr_dt_avg, _ = spearmanr(y_valid_split['Dt_avg'], y_valid_pred_df['Predicted Dt_avg'])
-
-            avg_spearman_corr = (spearman_corr_dt + spearman_corr_dt_avg) / 2
-
-            if ((len(current_features) > min_features) and  (avg_spearman_corr > best_feature_spearman_corr)) or ((len(current_features) <= min_features) and avg_spearman_corr>best_local_feature_spearman_corr):
-                best_feature_spearman_corr = avg_spearman_corr
-                best_local_feature_spearman_corr = avg_spearman_corr
-                best_feature = feature
-
-        if best_feature:
-            current_selected_features.append(best_feature)
-            current_remaining_features.remove(best_feature)
-            current_spearman_scores.append(best_feature_spearman_corr)
-        else:
-            break
-
-    # Update the best parameters if current iteration is better
-    if best_feature_spearman_corr > best_spearman_corr:
-        best_spearman_corr = best_feature_spearman_corr
-        selected_features = current_selected_features.copy()
-        spearman_scores = current_spearman_scores.copy()
-        best_test_size = test_size
-        best_random_state = random_state
-
-# End time measurement
-end_time = time.time()
-elapsed_time = end_time - start_time
-
-# Print the final selected features and elapsed time
-print("Selected features based on Spearman correlation:")
-print(selected_features)
-
-print(f"Best test size: {best_test_size}")
-print(f"Best random state: {best_random_state}")
-print(f"Elapsed time for the loop: {elapsed_time:.2f} seconds")
 
 # Final model training with the selected features
-X_train_selected = X_train[selected_features]
-X_train_split, X_valid_split, y_train_split, y_valid_split = train_test_split(
-    X_train_selected, y_train, test_size=best_test_size, random_state=best_random_state)
+    X_train_selected = X_train[selected_features]
+    X_train_split, X_valid_split, y_train_split, y_valid_split = train_test_split(
+        X_train_selected, y_train, test_size=best_test_size, random_state=best_random_state)
 
-model = LinearRegression()
-model.fit(X_train_split, y_train_split)
+    model = LinearRegression()
+    model.fit(X_train_split, y_train_split)
 
-y_valid_pred = model.predict(X_valid_split)
-y_valid_pred_df = pd.DataFrame(y_valid_pred, columns=['Predicted Dt', 'Predicted Dt_avg'], index=X_valid_split.index)
 
-# Evaluate the final model
-mse_valid = mean_squared_error(y_valid_split, y_valid_pred_df, multioutput='raw_values')
-r2_valid = r2_score(y_valid_split, y_valid_pred_df, multioutput='raw_values')
+    y_valid_pred = model.predict(X_valid_split)
+    y_valid_pred_df = pd.DataFrame(y_valid_pred, columns=['Predicted Dt', 'Predicted Dt_avg'], index=X_valid_split.index)
 
-spearman_corr_dt, _ = spearmanr(y_valid_split['Dt'], y_valid_pred_df['Predicted Dt'])
-spearman_corr_dt_avg, _ = spearmanr(y_valid_split['Dt_avg'], y_valid_pred_df['Predicted Dt_avg'])
+    # Evaluate the final model
+    mse_valid = mean_squared_error(y_valid_split, y_valid_pred_df, multioutput='raw_values')
+    r2_valid = r2_score(y_valid_split, y_valid_pred_df, multioutput='raw_values')
 
-print(f'Mean Squared Error for each target on validation data: {mse_valid}')
-print(f'R^2 Score for each target on validation data: {r2_valid}')
-print(f"Spearman's rank correlation coefficient for Dt: {spearman_corr_dt}")
-print(f"Spearman's rank correlation coefficient for Dt_avg: {spearman_corr_dt_avg}")
+    spearman_corr_dt, _ = spearmanr(y_valid_split['Dt'], y_valid_pred_df['Predicted Dt'])
+    spearman_corr_dt_avg, _ = spearmanr(y_valid_split['Dt_avg'], y_valid_pred_df['Predicted Dt_avg'])
+
+    print(f'Mean Squared Error for each target on validation data: {mse_valid}')
+    print(f'R^2 Score for each target on validation data: {r2_valid}')
+    print(f"Spearman's rank correlation coefficient for Dt: {spearman_corr_dt}")
+    print(f"Spearman's rank correlation coefficient for Dt_avg: {spearman_corr_dt_avg}")
+
 
 # Now, train the model on the entire training data and make predictions on the test data
-model.fit(X_train_selected, y_train)
+    model.fit(X_train_selected, y_train)
+
+else:
+    model = joblib.load(model_path)
 
 # Make predictions on the testing data
 selected_features = selected_features + ['Variant number']
@@ -210,6 +233,12 @@ y_test_pred_df = y_test_pred_df[['Variant number', 'Predicted Dt_avg', 'Predicte
 y_test_pred_df.columns = ['name', 'dt_average', 'DT_max']
 
 # Save the predictions to an Excel file
-predictions_file_path = 'test_predictions.xlsx'
+predictions_file_path = 'LRI_test_predictions.xlsx'
 y_test_pred_df.to_excel(predictions_file_path, index=False)
 print(f"Predictions saved to {predictions_file_path}")
+
+if not (LOAD_MODEL):
+# Save the model
+    model_path = 'LRI_model.pkl'
+    joblib.dump(model, model_path)
+    print(f"Model saved to {model_path}")
